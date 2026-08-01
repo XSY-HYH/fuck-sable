@@ -55,7 +55,7 @@ public abstract class ScalableLuxCompatMixin {
                 );
                 return new LevelLightEngine(chunkGetter, hasBlockLight, hasSkyLight);
             }
-            if (chunkGetter instanceof Level level) {
+            if (chunkGetter.getLevel() instanceof Level level) {
                 LevelLightEngine worldEngine = level.getLightEngine();
                 if (worldEngine instanceof StarLightLightingProvider provider) {
                     StarLightInterface starLight = provider.scalablelux$getLightEngine();
