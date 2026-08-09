@@ -2,6 +2,12 @@
 
 All notable changes to FuckSable will be documented in this file.
 
+## [1.7.23] - 2026-08-09
+
+### Bug 修复 / Bug Fixes
+
+- **async-save 存档卡顿回归修复 / async-save save freeze regression fix**: 修复 v1.7.12 起的"存档时服务器卡顿"回归。v1.7.12 在 `saveAll` 返回前 join 所有异步磁盘 IO（`fucksable$awaitPendingIO`），导致主线程在每次存档时阻塞等待全部磁盘 IO（含 gzip 压缩和 `flush` 的磁盘同步）完成，表现为存档时服务器明显卡顿。改为"非阻塞提交 + 屏障 drain"模式：`saveAll` 只把磁盘 IO 提交到异步线程且不在 `saveAll` 内阻塞；`flush` 也推迟到异步线程、在本批待写 IO 完成后执行；任何后续磁盘读取（`getOrLoadHoldingChunk`）以及下一次 `saveAll` / `close` 之前先 drain（join）未完成的异步 IO，既避免主线程与异步线程并发访问非线程安全的 `regionCache`/`storageCache`，又让磁盘 IO 与主线程序列化流水线重叠。/ Fixed the "server freezes during saves" regression introduced in v1.7.12. v1.7.12 joined all async disk IO (`fucksable$awaitPendingIO`) before `saveAll` returned, blocking the main thread on every save while waiting for all disk IO (gzip compression + `flush` disk sync) to finish. Changed to a "non-blocking submit + drain barrier" model: `saveAll` only submits disk IO to the async thread and never blocks inside `saveAll`; `flush` is deferred to the async thread and runs after the current batch of pending writes; before any later disk read (`getOrLoadHoldingChunk`) and before the next `saveAll` / `close`, pending async IO is drained (joined). This keeps the non-thread-safe `regionCache`/`storageCache` from being accessed concurrently by both threads while letting disk IO overlap with main-thread serialization.
+
 ## [1.7.22] - 2026-08-09 (re-published)
 
 ### Bug 修复 / Bug Fixes
