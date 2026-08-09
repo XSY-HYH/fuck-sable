@@ -27,7 +27,7 @@ import java.util.Set;
 @Mod(FuckSable.MOD_ID)
 public class FuckSable {
     public static final String MOD_ID = "fucksable";
-    public static final String VERSION = "1.7.19";
+    public static final String VERSION = "1.7.20";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
     private static FuckSableConfig config;
@@ -90,10 +90,9 @@ public class FuckSable {
         FixRegistry.register("copycats-lift-compat",
             "Prevents server crash when Copycats blocks with missing facing property trigger sable$getNormal in onBlockChange",
             true, Set.of("sable", "copycats"), FixEntry.Side.BOTH);
-        FixEntry playerPosGuard = FixRegistry.register("player-position-guard",
-            "Clamps player position to world border when coordinates exceed boundaries, preventing server crashes from SubLevel physics",
+        FixRegistry.register("player-position-guard",
+            "Clamps player position to world border when X/Z coordinates exceed boundaries, preventing server crashes from SubLevel physics. Y coordinate is no longer limited.",
             true, Set.of("sable"), FixEntry.Side.BOTH);
-        playerPosGuard.setDefaultOption("yMaxMargin", 1000.0);
         FixRegistry.register("light-engine-bounds-guard",
             "Prevents light engine crashes when SubLevel sections exceed world height limits during light propagation",
             true, Set.of("sable"), FixEntry.Side.BOTH);

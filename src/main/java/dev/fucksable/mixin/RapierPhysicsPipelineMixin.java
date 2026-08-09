@@ -1,6 +1,6 @@
 package dev.fucksable.mixin;
 
-import dev.fucksable.FuckSable;
+import dev.fucksable.ThrottledLogger;
 import dev.fucksable.fix.FixRegistry;
 import dev.ryanhcode.sable.api.physics.PhysicsPipelineBody;
 import dev.ryanhcode.sable.companion.math.Pose3d;
@@ -20,30 +20,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-
 @Mixin(RapierPhysicsPipeline.class)
 public abstract class RapierPhysicsPipelineMixin {
 
     @Shadow(remap = false)
     @Final
     private Int2ObjectMap<ServerSubLevel> activeSubLevels;
-
-    @Unique
-    private static final Set<String> fucksable$selfConstraintWarned = ConcurrentHashMap.newKeySet();
-
-    @Unique
-    private static final long FUCKSABLE$TELEPORT_WARN_INTERVAL_NS = 60_000_000_000L; // 60s
-    @Unique
-    private static volatile long fucksable$lastTeleportWarnTime = 0L;
-
-    @Unique
-    private static final long FUCKSABLE$VELOCITY_WARN_INTERVAL_NS = 60_000_000_000L; // 60s
-    @Unique
-    private static volatile long fucksable$lastLinearVelocityWarnTime = 0L;
-    @Unique
-    private static volatile long fucksable$lastAngularVelocityWarnTime = 0L;
 
     @Unique
     private boolean fucksable$isBodyValid(PhysicsPipelineBody body) {
@@ -71,13 +53,9 @@ public abstract class RapierPhysicsPipelineMixin {
     private void fucksable$safeGetLinearVelocity(PhysicsPipelineBody body, Vector3d dest, CallbackInfoReturnable<Vector3d> cir) {
         if (!this.fucksable$isPanicGuardEnabled()) return;
         if (!this.fucksable$isBodyValid(body)) {
-            long now = System.nanoTime();
-            long last = fucksable$lastLinearVelocityWarnTime;
-            if (now - last > FUCKSABLE$VELOCITY_WARN_INTERVAL_NS) {
-                fucksable$lastLinearVelocityWarnTime = now;
-                FuckSable.LOGGER.warn("Attempted to get linear velocity of invalid/removed body (id={}), returning zero. This warning is throttled to once per 60s.",
-                    body != null ? Rapier3D.getID(body) : "null");
-            }
+            ThrottledLogger.warn("rapier-linear-velocity:" + (body != null ? Rapier3D.getID(body) : "null"),
+                "Attempted to get linear velocity of invalid/removed body (id={}), returning zero",
+                body != null ? Rapier3D.getID(body) : "null");
             cir.setReturnValue(dest.zero());
         }
     }
@@ -86,13 +64,9 @@ public abstract class RapierPhysicsPipelineMixin {
     private void fucksable$safeGetAngularVelocity(PhysicsPipelineBody body, Vector3d dest, CallbackInfoReturnable<Vector3d> cir) {
         if (!this.fucksable$isPanicGuardEnabled()) return;
         if (!this.fucksable$isBodyValid(body)) {
-            long now = System.nanoTime();
-            long last = fucksable$lastAngularVelocityWarnTime;
-            if (now - last > FUCKSABLE$VELOCITY_WARN_INTERVAL_NS) {
-                fucksable$lastAngularVelocityWarnTime = now;
-                FuckSable.LOGGER.warn("Attempted to get angular velocity of invalid/removed body (id={}), returning zero. This warning is throttled to once per 60s.",
-                    body != null ? Rapier3D.getID(body) : "null");
-            }
+            ThrottledLogger.warn("rapier-angular-velocity:" + (body != null ? Rapier3D.getID(body) : "null"),
+                "Attempted to get angular velocity of invalid/removed body (id={}), returning zero",
+                body != null ? Rapier3D.getID(body) : "null");
             cir.setReturnValue(dest.zero());
         }
     }
@@ -103,7 +77,8 @@ public abstract class RapierPhysicsPipelineMixin {
     private void fucksable$safeReadPose(ServerSubLevel body, Pose3d dest, CallbackInfoReturnable<Pose3d> cir) {
         if (!this.fucksable$isPanicGuardEnabled()) return;
         if (!this.fucksable$isBodyValid(body)) {
-            FuckSable.LOGGER.warn("Attempted to read pose of invalid/removed body (id={}), returning current pose",
+            ThrottledLogger.warn("rapier-read-pose:" + (body != null ? Rapier3D.getID(body) : "null"),
+                "Attempted to read pose of invalid/removed body (id={}), returning current pose",
                 body != null ? Rapier3D.getID(body) : "null");
             cir.setReturnValue(dest);
         }
@@ -115,7 +90,8 @@ public abstract class RapierPhysicsPipelineMixin {
     private void fucksable$safeAddVelocity(PhysicsPipelineBody body, Vector3dc linearVelocity, Vector3dc angularVelocity, CallbackInfo ci) {
         if (!this.fucksable$isPanicGuardEnabled()) return;
         if (!this.fucksable$isBodyValid(body)) {
-            FuckSable.LOGGER.warn("Attempted to add velocity to invalid/removed body (id={}), skipping",
+            ThrottledLogger.warn("rapier-add-velocity:" + (body != null ? Rapier3D.getID(body) : "null"),
+                "Attempted to add velocity to invalid/removed body (id={}), skipping",
                 body != null ? Rapier3D.getID(body) : "null");
             ci.cancel();
         }
@@ -125,7 +101,8 @@ public abstract class RapierPhysicsPipelineMixin {
     private void fucksable$safeApplyImpulse(PhysicsPipelineBody body, Vector3dc force, Vector3dc torque, boolean wakeUp, CallbackInfo ci) {
         if (!this.fucksable$isPanicGuardEnabled()) return;
         if (!this.fucksable$isBodyValid(body)) {
-            FuckSable.LOGGER.warn("Attempted to apply impulse to invalid/removed body (id={}), skipping",
+            ThrottledLogger.warn("rapier-apply-impulse:" + (body != null ? Rapier3D.getID(body) : "null"),
+                "Attempted to apply impulse to invalid/removed body (id={}), skipping",
                 body != null ? Rapier3D.getID(body) : "null");
             ci.cancel();
         }
@@ -135,7 +112,8 @@ public abstract class RapierPhysicsPipelineMixin {
     private void fucksable$safeApplyForce(PhysicsPipelineBody body, Vector3dc position, Vector3dc force, CallbackInfo ci) {
         if (!this.fucksable$isPanicGuardEnabled()) return;
         if (!this.fucksable$isBodyValid(body)) {
-            FuckSable.LOGGER.warn("Attempted to apply force to invalid/removed body (id={}), skipping",
+            ThrottledLogger.warn("rapier-apply-force:" + (body != null ? Rapier3D.getID(body) : "null"),
+                "Attempted to apply force to invalid/removed body (id={}), skipping",
                 body != null ? Rapier3D.getID(body) : "null");
             ci.cancel();
         }
@@ -145,7 +123,8 @@ public abstract class RapierPhysicsPipelineMixin {
     private void fucksable$safeWakeUp(PhysicsPipelineBody body, CallbackInfo ci) {
         if (!this.fucksable$isPanicGuardEnabled()) return;
         if (!this.fucksable$isBodyValid(body)) {
-            FuckSable.LOGGER.warn("Attempted to wake up invalid/removed body (id={}), skipping",
+            ThrottledLogger.warn("rapier-wake-up:" + (body != null ? Rapier3D.getID(body) : "null"),
+                "Attempted to wake up invalid/removed body (id={}), skipping",
                 body != null ? Rapier3D.getID(body) : "null");
             ci.cancel();
         }
@@ -157,13 +136,9 @@ public abstract class RapierPhysicsPipelineMixin {
     private void fucksable$safeTeleport(PhysicsPipelineBody body, Vector3dc position, Quaterniondc orientation, CallbackInfo ci) {
         if (!this.fucksable$isPanicGuardEnabled()) return;
         if (!this.fucksable$isBodyValid(body)) {
-            long now = System.nanoTime();
-            long last = fucksable$lastTeleportWarnTime;
-            if (now - last > FUCKSABLE$TELEPORT_WARN_INTERVAL_NS) {
-                fucksable$lastTeleportWarnTime = now;
-                FuckSable.LOGGER.warn("Attempted to teleport invalid/removed body (id={}), skipping. This warning is throttled to once per 60s.",
-                    body != null ? Rapier3D.getID(body) : "null");
-            }
+            ThrottledLogger.warn("rapier-teleport:" + (body != null ? Rapier3D.getID(body) : "null"),
+                "Attempted to teleport invalid/removed body (id={}), skipping",
+                body != null ? Rapier3D.getID(body) : "null");
             ci.cancel();
         }
     }
@@ -174,7 +149,8 @@ public abstract class RapierPhysicsPipelineMixin {
     private void fucksable$safeOnStatsChanged(ServerSubLevel serverSubLevel, CallbackInfo ci) {
         if (!this.fucksable$isPanicGuardEnabled()) return;
         if (!this.fucksable$isBodyValid(serverSubLevel)) {
-            FuckSable.LOGGER.warn("Attempted to update stats of invalid/removed body (id={}), skipping",
+            ThrottledLogger.warn("rapier-stats-changed:" + (serverSubLevel != null ? Rapier3D.getID(serverSubLevel) : "null"),
+                "Attempted to update stats of invalid/removed body (id={}), skipping",
                 serverSubLevel != null ? Rapier3D.getID(serverSubLevel) : "null");
             ci.cancel();
         }

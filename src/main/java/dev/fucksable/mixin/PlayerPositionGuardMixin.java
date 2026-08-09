@@ -1,13 +1,11 @@
 package dev.fucksable.mixin;
 
-import dev.fucksable.FuckSable;
-import dev.fucksable.fix.FixEntry;
+import dev.fucksable.ThrottledLogger;
 import dev.fucksable.fix.FixRegistry;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.level.border.WorldBorder;
 import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -20,8 +18,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * 导致后续的坐标计算和区块加载出现异常，最终引发服务器崩溃。
  * <p>
  * 修复方式：
- * 在 ServerPlayer.tick 中检查玩家坐标是否超出世界边界，
+ * 在 ServerPlayer.tick 中检查玩家 X/Z 坐标是否超出世界边界，
  * 如果超出则立刻将其拉回最近的边界点。
+ * 不再限制 Y 坐标，玩家可以自由飞出世界高度。
  */
 @Mixin(ServerPlayer.class)
 public class PlayerPositionGuardMixin {
@@ -33,49 +32,28 @@ public class PlayerPositionGuardMixin {
         ServerPlayer self = (ServerPlayer) (Object) this;
         Vec3 pos = self.position();
 
-        // 世界边界检查（拉回边界+5，避免紧贴边界）
+        // 世界边界检查（仅 X/Z 轴，拉回边界+5，避免紧贴边界）
         WorldBorder border = self.level().getWorldBorder();
         double minX = border.getMinX() + 5.0;
         double maxX = border.getMaxX() - 5.0;
         double minZ = border.getMinZ() + 5.0;
         double maxZ = border.getMaxZ() - 5.0;
 
-        // Y 轴边界（原版高度 + 可配置富裕空间，默认 1000）
-        // Y 下界：创造模式拉回（+5），生存模式正常掉落不干预
-        double minY = self.level().getMinBuildHeight() + 5.0;
-        double yMaxMargin = fucksable$getDoubleOption("yMaxMargin", 1000.0);
-        double maxY = self.level().getMaxBuildHeight() + yMaxMargin;
-        boolean isCreative = self.isCreative();
-
         boolean outOfBounds = false;
         double clampedX = pos.x;
-        double clampedY = pos.y;
         double clampedZ = pos.z;
 
         if (clampedX < minX) { clampedX = minX; outOfBounds = true; }
         if (clampedX > maxX) { clampedX = maxX; outOfBounds = true; }
         if (clampedZ < minZ) { clampedZ = minZ; outOfBounds = true; }
         if (clampedZ > maxZ) { clampedZ = maxZ; outOfBounds = true; }
-        if (isCreative && clampedY < minY) { clampedY = minY; outOfBounds = true; }
-        if (clampedY > maxY) { clampedY = maxY; outOfBounds = true; }
 
         if (outOfBounds) {
-            FuckSable.LOGGER.warn("Player {} was out of world bounds at ({}, {}, {}), clamping to ({}, {}, {})",
-                self.getName().getString(), pos.x, pos.y, pos.z, clampedX, clampedY, clampedZ);
-            self.setPos(clampedX, clampedY, clampedZ);
+            ThrottledLogger.warn("player-position:" + self.getUUID(),
+                "Player {} was out of world bounds at ({}, {}, {}), clamping X/Z to ({}, {})",
+                self.getName().getString(), pos.x, pos.y, pos.z, clampedX, clampedZ);
+            self.setPos(clampedX, pos.y, clampedZ);
             self.setDeltaMovement(new Vec3(0.0, 0.0, 0.0));
         }
-    }
-
-    @Unique
-    private static double fucksable$getDoubleOption(String key, double defaultValue) {
-        FixEntry entry = FixRegistry.getFix("player-position-guard");
-        if (entry == null) return defaultValue;
-        Object val = entry.getOption(key);
-        if (val instanceof Number) return ((Number) val).doubleValue();
-        if (val instanceof String) {
-            try { return Double.parseDouble((String) val); } catch (NumberFormatException e) { return defaultValue; }
-        }
-        return defaultValue;
     }
 }

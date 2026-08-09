@@ -2,7 +2,7 @@ package dev.fucksable.mixin;
 
 import com.simibubi.create.content.logistics.packagePort.frogport.FrogportBlockEntity;
 import com.simibubi.create.foundation.item.ItemHelper;
-import dev.fucksable.FuckSable;
+import dev.fucksable.ThrottledLogger;
 import dev.fucksable.fix.FixRegistry;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.IItemHandler;
@@ -35,8 +35,6 @@ import java.util.function.Predicate;
 public class FrogportItemExtractLimitMixin {
 
     private static final int MAX_SLOTS = 256;
-    private static final long SLOT_WARN_INTERVAL_NS = 60_000_000_000L; // 60s
-    private static volatile long fucksable$lastWarnTime = 0L;
 
     @Redirect(
         method = "tryPullingFrom",
@@ -59,16 +57,11 @@ public class FrogportItemExtractLimitMixin {
             return ItemHelper.extract(handler, predicate, copy);
         }
 
-        // 槽位数超限，跳过并限流告警
-        long now = System.nanoTime();
-        long last = fucksable$lastWarnTime;
-        if (now - last > SLOT_WARN_INTERVAL_NS) {
-            fucksable$lastWarnTime = now;
-            FuckSable.LOGGER.warn(
-                "Frogport adjacent inventory has {} slots (limit {}), skipping extract to prevent server freeze. Reduce inventory size or move frogport.",
-                slots, MAX_SLOTS
-            );
-        }
+        // 槽位数超限，跳过并通过 ThrottledLogger 节流告警
+        ThrottledLogger.warn("frogport-extract-limit",
+            "Frogport adjacent inventory has {} slots (limit {}), skipping extract to prevent server freeze. Reduce inventory size or move frogport.",
+            slots, MAX_SLOTS
+        );
         return ItemStack.EMPTY;
     }
 }

@@ -1,6 +1,6 @@
 package dev.fucksable.mixin;
 
-import dev.fucksable.FuckSable;
+import dev.fucksable.ThrottledLogger;
 import dev.fucksable.fix.FixEntry;
 import dev.fucksable.fix.FixRegistry;
 import net.minecraft.core.BlockPos;
@@ -19,15 +19,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * 导致大量区块被加载/生成、光照更新范围极大，最终服务器卡死或崩溃。
  *
  * 修复方式：在 Level.setBlock 和 Level.destroyBlock 入口处检查坐标是否超出合理范围，
- * 超出则跳过方块操作并记录警告（节流）。
+ * 超出则跳过方块操作并记录警告（通过 ThrottledLogger 节流）。
  * 坐标范围（xLimit, yMin, yMax）从 block-destroy-coordinate-guard 修复项的 options 读取，
  * 可通过 config.json 配置。
  */
 @Mixin(Level.class)
 public class LevelDestroyBlockGuardMixin {
-
-    @Unique
-    private static long fucksable$lastCoordWarnTime = 0;
 
     @Inject(method = "setBlock(Lnet/minecraft/core/BlockPos;Lnet/minecraft/world/level/block/state/BlockState;II)Z", at = @At("HEAD"), cancellable = true)
     private void fucksable$guardSetBlockBounds(BlockPos pos, BlockState state, int flags, int maxUpdateDepth, CallbackInfoReturnable<Boolean> cir) {
@@ -72,18 +69,13 @@ public class LevelDestroyBlockGuardMixin {
 
     @Unique
     private static void fucksable$warnExtremeCoordinate(String operation, BlockPos pos) {
-        long now = System.currentTimeMillis();
-        if (now - fucksable$lastCoordWarnTime > 60_000) {
-            fucksable$lastCoordWarnTime = now;
-            int xLimit = fucksable$getIntOption("xLimit", 30_000_000);
-            int yMin = fucksable$getIntOption("yMin", -512);
-            int yMax = fucksable$getIntOption("yMax", 1024);
-            FuckSable.LOGGER.warn(
-                "Blocked {} at extreme coordinate {} (likely integer overflow from a modded item). " +
-                "Current limits: x/z limit={}, y range=[{}, {}]. " +
-                "This warning is throttled to once per 60s.",
-                operation, pos, xLimit, yMin, yMax
-            );
-        }
+        int xLimit = fucksable$getIntOption("xLimit", 30_000_000);
+        int yMin = fucksable$getIntOption("yMin", -512);
+        int yMax = fucksable$getIntOption("yMax", 1024);
+        ThrottledLogger.warn("extreme-coord:" + operation,
+            "Blocked {} at extreme coordinate {} (likely integer overflow from a modded item). " +
+            "Current limits: x/z limit={}, y range=[{}, {}].",
+            operation, pos, xLimit, yMin, yMax
+        );
     }
 }

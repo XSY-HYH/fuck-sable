@@ -2,6 +2,14 @@
 
 All notable changes to FuckSable will be documented in this file.
 
+## [1.7.20] - 2026-08-04
+
+### 重构 / Refactor
+
+- **统一日志节流代理 / Unified log throttle proxy**: 创建 `ThrottledLogger` 统一输出代理类，按 key 限制日志输出频率（默认 60 秒窗口），支持永久去重（`warnOnce`）和转发到外部 Logger（`warnTo`/`errorTo`）。删除各 mixin 中分散的节流字段和逻辑，统一改为调用 `ThrottledLogger`。/ Created `ThrottledLogger` unified output proxy class, throttles log output by key (default 60s window), supports permanent dedup (`warnOnce`) and forwarding to external Logger (`warnTo`/`errorTo`). Removed scattered throttle fields and logic across mixins, unified to use `ThrottledLogger`.
+  - 改造的文件 / Modified files: `RapierPhysicsPipelineMixin`, `LevelDestroyBlockGuardMixin`, `FrogportItemExtractLimitMixin`, `SubLevelStorageLogSpamMixin`, `CttLogSpamFixMixin`, `RapierConstraintSelfFixMixinV1`, `RapierConstraintSelfFixMixinV2`
+  - `RapierPhysicsPipelineMixin` 中之前未节流的 warn 调用（`readPose`、`addVelocity`、`applyImpulse`、`applyForce`、`wakeUp`、`onStatsChanged`）现在也通过 `ThrottledLogger` 节流。/ Previously unthrottled warn calls in `RapierPhysicsPipelineMixin` (`readPose`, `addVelocity`, `applyImpulse`, `applyForce`, `wakeUp`, `onStatsChanged`) are now also throttled via `ThrottledLogger`.
+
 ## [1.7.19] - 2026-08-04
 
 ### Bug 修复 / Bug Fixes

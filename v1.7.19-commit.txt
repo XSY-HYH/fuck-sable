@@ -1,4 +1,0 @@
-v1.7.19: fix velocity query warning spam with 60s throttle
-
-- Add 60s throttle to getLinearVelocity and getAngularVelocity warnings
-- Consistent with existing teleport warning throttle
