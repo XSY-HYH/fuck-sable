@@ -27,7 +27,7 @@ import java.util.Set;
 @Mod(FuckSable.MOD_ID)
 public class FuckSable {
     public static final String MOD_ID = "fucksable";
-    public static final String VERSION = "1.7.20";
+    public static final String VERSION = "1.7.21";
     public static final Logger LOGGER = LoggerFactory.getLogger(MOD_ID);
 
     private static FuckSableConfig config;
@@ -161,6 +161,13 @@ public class FuckSable {
         FixRegistry.register("constraint-self-fix",
             "Suppresses self-constraint errors in Sable physics pipeline: when a constraint is added between a SubLevel and itself, returns null instead of throwing IllegalArgumentException, preventing log spam",
             true, Set.of("sable"), FixEntry.Side.BOTH);
+
+        // === 实验性修复 ===
+        FixEntry worldHeightOverride = FixRegistry.register("world-height-override",
+            "EXPERIMENTAL: Overrides vanilla world build height limits (getMaxBuildHeight/getMinBuildHeight). May cause incompatibility with other mods that depend on vanilla height. Use with caution.",
+            false, null, FixEntry.Side.BOTH);
+        worldHeightOverride.setDefaultOption("maxBuildHeight", 320);
+        worldHeightOverride.setDefaultOption("minBuildHeight", -64);
 
         // === 彩蛋 ===
         FixRegistry.register("fuck-op-player",

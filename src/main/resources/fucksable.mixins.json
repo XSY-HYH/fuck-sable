@@ -42,7 +42,8 @@
     "PersistentEntitySectionManagerStopTrackingGuardMixin",
     "RigidBodyHandleMixin",
     "ScalableLuxCompatMixin",
-    "LevelDestroyBlockGuardMixin"
+    "LevelDestroyBlockGuardMixin",
+    "WorldHeightOverrideMixin"
   ],
   "client": [
     "EffortlessParticleFixMixin"

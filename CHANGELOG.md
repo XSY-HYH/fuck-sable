@@ -2,6 +2,13 @@
 
 All notable changes to FuckSable will be documented in this file.
 
+## [1.7.21] - 2026-08-09
+
+### 新增 / New Features
+
+- **实验性世界高度覆盖 / Experimental world height override**: 新增 `world-height-override` 修复项（默认关闭），通过拦截 `Level.getMaxBuildHeight()` 和 `Level.getMinBuildHeight()` 允许自定义世界构建高度范围。配置选项 `maxBuildHeight`（默认 320）和 `minBuildHeight`（默认 -64）。/ Added `world-height-override` fix (disabled by default), overrides vanilla world build height limits via `Level.getMaxBuildHeight()` and `Level.getMinBuildHeight()`. Configurable options `maxBuildHeight` (default 320) and `minBuildHeight` (default -64).
+  - **注意 / Warning**: 实验性功能，可能与依赖原版高度的其他 mod 不兼容。启用前请充分测试。/ Experimental, may be incompatible with other mods that depend on vanilla height. Test thoroughly before enabling.
+
 ## [1.7.20] - 2026-08-04
 
 ### 重构 / Refactor
