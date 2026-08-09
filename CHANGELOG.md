@@ -2,6 +2,16 @@
 
 All notable changes to FuckSable will be documented in this file.
 
+## [1.7.22] - 2026-08-09 (re-published)
+
+### Bug 修复 / Bug Fixes
+
+- **world-height-override mixin 注入失败修复 / world-height-override mixin injection failure fix**: `world-height-override` 功能经历了两轮修复才最终可用：
+  - **v1.7.21 问题 / v1.7.21 issue**: `WorldHeightOverrideMixin` 拦截 `Level.getMaxBuildHeight()` 失败导致游戏启动崩溃。`getMaxBuildHeight()` 和 `getMinBuildHeight()` 是 `LevelHeightAccessor` 接口的 default 方法，`Level` 类没有 override 它们，所以拦截 `Level` 类找不到目标方法（`Scanned 0 target(s)`）。改为拦截 `LevelHeightAccessor` 接口，通过 `instanceof Level` 检查确保只影响 `Level` 及其子类。
+  - **v1.7.22 原始版本问题（已撤回）/ v1.7.22 original issue (withdrawn)**: 改用 `@Mixin(targets = "net.minecraft.world.level.LevelHeightAccessor", remap = false)` 字符串 targets 写法后，mixin 框架在 prepare 阶段无法从字符串推断 target 类型，默认按 Standard (class) SubType 处理，`validateTarget` 时因 target 实际是 interface 报 `@Mixin target type mismatch: net.minecraft.world.level.LevelHeightAccessor is an interface` 错误。改为 `@Mixin(LevelHeightAccessor.class)` 直接引用接口类对象，让 mixin 框架从 Class 对象自动识别为 Interface SubType。
+  - / **v1.7.21**: `WorldHeightOverrideMixin` crashed on startup because `getMaxBuildHeight()` and `getMinBuildHeight()` are default methods of `LevelHeightAccessor` interface, not overridden by `Level`, so injecting into `Level` scanned 0 targets. Changed to target `LevelHeightAccessor` interface with `instanceof Level` guard.
+  - / **v1.7.22 original (withdrawn)**: After switching to `@Mixin(targets = "...")` string syntax, mixin framework could not infer target type from string at prepare phase, defaulted to Standard (class) SubType, and `validateTarget` failed with `@Mixin target type mismatch: ... is an interface`. Changed to `@Mixin(LevelHeightAccessor.class)` direct class reference so mixin framework auto-detects Interface SubType from Class object.
+
 ## [1.7.21] - 2026-08-09
 
 ### 新增 / New Features
