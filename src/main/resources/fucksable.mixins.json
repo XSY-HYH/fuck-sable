@@ -43,7 +43,8 @@
     "RigidBodyHandleMixin",
     "ScalableLuxCompatMixin",
     "LevelDestroyBlockGuardMixin",
-    "WorldHeightOverrideMixin"
+    "WorldHeightOverrideMixin",
+    "SubLevelStorageRegionCacheSyncMixin"
   ],
   "client": [
     "EffortlessParticleFixMixin"

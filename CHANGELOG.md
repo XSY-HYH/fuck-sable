@@ -2,6 +2,24 @@
 
 All notable changes to FuckSable will be documented in this file.
 
+## [1.7.25] - 2026-08-10
+
+### 变更 / Changes
+
+- **测试功能标记机制 / Experimental fix tagging mechanism**: 在 `FixEntry` 中新增 `experimental` 字段，允许将修复项标记为测试功能。标记后在 `/fucksable` 命令列表和详情中以黄色 `[测试]` / `[Experimental]` 标签显示。已将 `world-height-override` 标记为测试功能。/ Added `experimental` field to `FixEntry`, allowing fixes to be tagged as experimental. Tagged fixes display a yellow `[测试]` / `[Experimental]` label in the `/fucksable` command list and details. `world-height-override` is now tagged as experimental.
+
+## [1.7.24] - 2026-08-10
+
+### Bug 修复 / Bug Fixes
+
+- **SubLevelStorage storageCache 并发崩溃修复 / SubLevelStorage storageCache concurrent crash fix (Issue #20)**: 修复 `SubLevelStorage.getRegionStorageFile` 中 `Long2ObjectLinkedOpenHashMap`（storageCache）并发访问导致 `ArrayIndexOutOfBoundsException: Index -1 out of bounds for length N` 崩溃的问题。当 async-save 修复项启用时，`attemptSaveSubLevel` 在异步线程执行访问 storageCache，若主线程同时通过 `getOrLoadHoldingChunk` → `attemptLoadSubLevel` → `getRegionStorageFile` 访问 storageCache，会导致 FastUtil 链表 map 的 prev/next 指针状态损坏。新增 `SubLevelStorageRegionCacheSyncMixin`，用 `synchronized(map)` 保护 `getAndMoveToFirst`、`removeLast`、`putAndMoveToFirst` 三个链表修改操作，确保并发安全。/ Fixed `ArrayIndexOutOfBoundsException: Index -1 out of bounds for length N` crash caused by concurrent access to `Long2ObjectLinkedOpenHashMap` (storageCache) in `SubLevelStorage.getRegionStorageFile`. When async-save fix is enabled, `attemptSaveSubLevel` runs on async thread accessing storageCache; if main thread simultaneously accesses it via `getOrLoadHoldingChunk` → `attemptLoadSubLevel` → `getRegionStorageFile`, the FastUtil linked-map's prev/next pointer state gets corrupted. Added `SubLevelStorageRegionCacheSyncMixin` to protect `getAndMoveToFirst`, `removeLast`, `putAndMoveToFirst` chain-modification operations with `synchronized(map)`, ensuring concurrent safety.
+
+## [1.7.23] - 2026-08-09
+
+### Bug 修复 / Bug Fixes
+
+- **async-save 存档卡顿回归修复 / async-save save freeze regression fix**: 修复 v1.7.12 起的"存档时服务器卡顿"回归。v1.7.12 在 `saveAll` 返回前 join 所有异步磁盘 IO（`fucksable$awaitPendingIO`），导致主线程在每次存档时阻塞等待全部磁盘 IO（含 gzip 压缩和 `flush` 的磁盘同步）完成，表现为存档时服务器明显卡顿。改为"非阻塞提交 + 屏障 drain"模式：`saveAll` 只把磁盘 IO 提交到异步线程且不在 `saveAll` 内阻塞；`flush` 也推迟到异步线程、在本批待写 IO 完成后执行；任何后续磁盘读取（`getOrLoadHoldingChunk`）以及下一次 `saveAll` / `close` 之前先 drain（join）未完成的异步 IO，既避免主线程与异步线程并发访问非线程安全的 `regionCache`/`storageCache`，又让磁盘 IO 与主线程序列化流水线重叠。/ Fixed the "server freezes during saves" regression introduced in v1.7.12. v1.7.12 joined all async disk IO (`fucksable$awaitPendingIO`) before `saveAll` returned, blocking the main thread on every save while waiting for all disk IO (gzip compression + `flush` disk sync) to finish. Changed to a "non-blocking submit + drain barrier" model: `saveAll` only submits disk IO to the async thread and never blocks inside `saveAll`; `flush` is deferred to the async thread and runs after the current batch of pending writes; before any later disk read (`getOrLoadHoldingChunk`) and before the next `saveAll` / `close`, pending async IO is drained (joined). This keeps the non-thread-safe `regionCache`/`storageCache` from being accessed concurrently by both threads while letting disk IO overlap with main-thread serialization.
+
 ## [1.7.22] - 2026-08-09 (re-published)
 
 ### Bug 修复 / Bug Fixes

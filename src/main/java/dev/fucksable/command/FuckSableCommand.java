@@ -85,7 +85,11 @@ public class FuckSableCommand {
                 String statusKey = entry.isEnabled() ? "command.enabled" : "command.disabled";
                 status = LanguageManager.get(statusKey);
             }
-            String line = LanguageManager.get("command.fix-status", entry.getId(), status);
+            String id = entry.getId();
+            if (entry.isExperimental()) {
+                id = LanguageManager.get("command.experimental-tag") + " " + id;
+            }
+            String line = LanguageManager.get("command.fix-status", id, status);
             source.sendSuccess(() -> Component.literal("  " + line), false);
         }
         return FixRegistry.getAllFixes().size();
@@ -110,7 +114,11 @@ public class FuckSableCommand {
         }
 
         StringBuilder info = new StringBuilder();
-        info.append(LanguageManager.get("command.fix-status", entry.getId(), status)).append("\n");
+        String id = entry.getId();
+        if (entry.isExperimental()) {
+            id = LanguageManager.get("command.experimental-tag") + " " + id;
+        }
+        info.append(LanguageManager.get("command.fix-status", id, status)).append("\n");
         info.append(LanguageManager.get("command.fix-desc", desc));
         if (!entry.getRequiredMods().isEmpty()) {
             info.append("\n").append(LanguageManager.get("command.fix-requires", String.join(", ", entry.getRequiredMods())));

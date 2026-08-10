@@ -11,6 +11,7 @@ command:
   fix-desc: "描述: %s"
   fix-status: "%s [%s]"
   fix-requires: "前置模组: %s"
+  experimental-tag: "§e[测试]§r"
   fix-env-blocked: "无法切换修复项 '%s': 缺少前置模组"
   all-enabled: "已启用全部修复项 (%d)"
   all-disabled: "已禁用全部修复项 (%d)"

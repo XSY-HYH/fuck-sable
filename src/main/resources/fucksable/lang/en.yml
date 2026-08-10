@@ -11,6 +11,7 @@ command:
   fix-desc: "Description: %s"
   fix-status: "%s [%s]"
   fix-requires: "Required mods: %s"
+  experimental-tag: "§e[Experimental]§r"
   fix-env-blocked: "Cannot toggle fix '%s': required mod(s) not loaded"
   all-enabled: "All fixes enabled (%d)"
   all-disabled: "All fixes disabled (%d)"

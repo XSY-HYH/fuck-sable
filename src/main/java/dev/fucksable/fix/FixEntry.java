@@ -32,6 +32,7 @@ public class FixEntry {
     private final Set<String> requiredMods;
     private final Side side;
     private final boolean hidden;
+    private boolean experimental;
     private boolean environmentMet;
     private boolean enabled;
     private final Map<String, Object> options;
@@ -59,6 +60,8 @@ public class FixEntry {
     public Set<String> getRequiredMods() { return requiredMods; }
     public Side getSide() { return side; }
     public boolean isHidden() { return hidden; }
+    public boolean isExperimental() { return experimental; }
+    public void setExperimental(boolean experimental) { this.experimental = experimental; }
     public boolean isEnvironmentMet() { return environmentMet; }
 
     /**

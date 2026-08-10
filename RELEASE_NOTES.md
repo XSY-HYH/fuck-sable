@@ -1,3 +1,89 @@
+## v1.7.25
+
+### 测试功能标记机制 / Experimental Fix Tagging Mechanism
+
+在 `FixEntry` 中新增 `experimental` 字段，允许将修复项标记为测试功能。标记后在 `/fucksable` 命令列表和详情中以黄色 `[测试]` / `[Experimental]` 标签显示。已将 `world-height-override` 标记为测试功能。
+
+Added `experimental` field to `FixEntry`, allowing fixes to be tagged as experimental. Tagged fixes display a yellow `[测试]` / `[Experimental]` label in the `/fucksable` command list and details. `world-height-override` is now tagged as experimental.
+
+### 兼容性 / Compatibility
+
+- Sable 1.x 和 2.x / Sable 1.x and 2.x
+- NeoForge 1.21.1
+- Mohist/Youer 混合服务端 / Mohist/Youer hybrid servers
+- ScalableLux（光照优化）兼容 / ScalableLux (lighting optimization) compatible
+- c2me 兼容 / c2me compatible
+
+## v1.7.24
+
+### SubLevelStorage storageCache 并发崩溃修复 / SubLevelStorage storageCache Concurrent Crash Fix (Issue #20)
+
+修复 `SubLevelStorage.getRegionStorageFile` 中 `Long2ObjectLinkedOpenHashMap`（storageCache）并发访问导致 `ArrayIndexOutOfBoundsException: Index -1 out of bounds for length N` 崩溃的问题。
+
+Fixed `ArrayIndexOutOfBoundsException: Index -1 out of bounds for length N` crash caused by concurrent access to `Long2ObjectLinkedOpenHashMap` (storageCache) in `SubLevelStorage.getRegionStorageFile`.
+
+**问题 / Issue**: 当 `async-save` 修复项启用时，`attemptSaveSubLevel` 在异步线程执行访问 storageCache。若主线程同时通过 `getOrLoadHoldingChunk` → `attemptLoadSubLevel` → `getRegionStorageFile` 访问 storageCache，会导致 FastUtil 链表 map 的 prev/next 指针状态损坏，最终抛出 `ArrayIndexOutOfBoundsException`。
+
+When `async-save` fix is enabled, `attemptSaveSubLevel` runs on async thread accessing storageCache. If main thread simultaneously accesses it via `getOrLoadHoldingChunk` → `attemptLoadSubLevel` → `getRegionStorageFile`, the FastUtil linked-map's prev/next pointer state gets corrupted, ultimately throwing `ArrayIndexOutOfBoundsException`.
+
+**修复 / Fix**: 新增 `SubLevelStorageRegionCacheSyncMixin`，用 `synchronized(map)` 保护 `getAndMoveToFirst`、`removeLast`、`putAndMoveToFirst` 三个链表修改操作，确保并发安全。
+
+Added `SubLevelStorageRegionCacheSyncMixin` to protect `getAndMoveToFirst`, `removeLast`, `putAndMoveToFirst` chain-modification operations with `synchronized(map)`, ensuring concurrent safety.
+
+### 兼容性 / Compatibility
+
+- Sable 1.x 和 2.x / Sable 1.x and 2.x
+- NeoForge 1.21.1
+- Mohist/Youer 混合服务端 / Mohist/Youer hybrid servers
+- ScalableLux（光照优化）兼容 / ScalableLux (lighting optimization) compatible
+- c2me 兼容 / c2me compatible
+
+## v1.7.23
+
+### async-save 存档卡顿回归修复 / async-save Save Freeze Regression Fix
+
+修复 v1.7.12 起的"存档时服务器卡顿"回归。v1.7.12 在 `saveAll` 返回前 join 所有异步磁盘 IO，导致主线程在每次存档时阻塞等待全部磁盘 IO 完成，表现为存档时服务器明显卡顿。
+
+Fixed the "server freezes during saves" regression introduced in v1.7.12. v1.7.12 joined all async disk IO before `saveAll` returned, blocking the main thread on every save while waiting for all disk IO to finish.
+
+**修复 / Fix**: 改为"非阻塞提交 + 屏障 drain"模式：`saveAll` 只把磁盘 IO 提交到异步线程且不在 `saveAll` 内阻塞；任何后续磁盘读取（`getOrLoadHoldingChunk`）以及下一次 `saveAll` / `close` 之前先 drain 未完成的异步 IO，既避免主线程与异步线程并发访问非线程安全的 `regionCache`/`storageCache`，又让磁盘 IO 与主线程序列化流水线重叠。
+
+Changed to a "non-blocking submit + drain barrier" model: `saveAll` only submits disk IO to the async thread and never blocks inside `saveAll`; before any later disk read (`getOrLoadHoldingChunk`) and before the next `saveAll` / `close`, pending async IO is drained. This keeps the non-thread-safe `regionCache`/`storageCache` from being accessed concurrently while letting disk IO overlap with main-thread serialization.
+
+**感谢 / Thanks**: 感谢 [Variapolis](https://github.com/Variapolis) 的 PR #19 贡献。/ Thanks to [Variapolis](https://github.com/Variapolis) for the PR #19 contribution.
+
+### 兼容性 / Compatibility
+
+- Sable 1.x 和 2.x / Sable 1.x and 2.x
+- NeoForge 1.21.1
+- Mohist/Youer 混合服务端 / Mohist/Youer hybrid servers
+- ScalableLux（光照优化）兼容 / ScalableLux (lighting optimization) compatible
+- c2me 兼容 / c2me compatible
+
+## v1.7.22
+
+### world-height-override mixin 注入失败修复 / world-height-override Mixin Injection Failure Fix (re-published)
+
+`world-height-override` 功能经历了两轮修复才最终可用。
+
+`world-height-override` went through two rounds of fixes before working correctly.
+
+**v1.7.21 问题 / v1.7.21 issue**: `WorldHeightOverrideMixin` 拦截 `Level.getMaxBuildHeight()` 失败导致游戏启动崩溃。`getMaxBuildHeight()` 和 `getMinBuildHeight()` 是 `LevelHeightAccessor` 接口的 default 方法，`Level` 类没有 override 它们，所以拦截 `Level` 类找不到目标方法（`Scanned 0 target(s)`）。改为拦截 `LevelHeightAccessor` 接口，通过 `instanceof Level` 检查确保只影响 `Level` 及其子类。
+
+`WorldHeightOverrideMixin` crashed on startup because `getMaxBuildHeight()` and `getMinBuildHeight()` are default methods of `LevelHeightAccessor` interface, not overridden by `Level`, so injecting into `Level` scanned 0 targets. Changed to target `LevelHeightAccessor` interface with `instanceof Level` guard.
+
+**v1.7.22 原始版本问题（已撤回）/ v1.7.22 original issue (withdrawn)**: 改用 `@Mixin(targets = "...")` 字符串 targets 写法后，mixin 框架在 prepare 阶段无法从字符串推断 target 类型，默认按 Standard (class) SubType 处理，`validateTarget` 时因 target 实际是 interface 报 `@Mixin target type mismatch: ... is an interface` 错误。改为 `@Mixin(LevelHeightAccessor.class)` 直接引用接口类对象，让 mixin 框架从 Class 对象自动识别为 Interface SubType。
+
+After switching to `@Mixin(targets = "...")` string syntax, mixin framework could not infer target type from string at prepare phase, defaulted to Standard (class) SubType, and `validateTarget` failed with `@Mixin target type mismatch: ... is an interface`. Changed to `@Mixin(LevelHeightAccessor.class)` direct class reference so mixin framework auto-detects Interface SubType from Class object.
+
+### 兼容性 / Compatibility
+
+- Sable 1.x 和 2.x / Sable 1.x and 2.x
+- NeoForge 1.21.1
+- Mohist/Youer 混合服务端 / Mohist/Youer hybrid servers
+- ScalableLux（光照优化）兼容 / ScalableLux (lighting optimization) compatible
+- c2me 兼容 / c2me compatible
+
 ## v1.7.12
 
 ### async-save PalettedContainer 多线程崩溃修复 / async-save PalettedContainer Multithreading Crash Fix
